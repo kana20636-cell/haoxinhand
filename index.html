@@ -3,41 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>好心手作 - 營運管理系統 (響應式優化)</title>
+    <title>好心手作 - 管理系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { background-color: #F3F4F6; font-family: sans-serif; min-height: 100vh; }
-        
-        /* 側邊欄電腦版樣式 */
-        .sidebar { 
-            width: 220px; background: white; border-right: 1px solid #E5E7EB; 
-            position: fixed; height: 100%; z-index: 50; transition: transform 0.3s ease;
-        }
-
-        /* 手機版隱藏選單 */
+        .sidebar { width: 220px; background: white; border-right: 1px solid #E5E7EB; position: fixed; height: 100%; z-index: 50; transition: transform 0.3s ease; }
         @media (max-width: 768px) {
             .sidebar { transform: translateX(-100%); width: 200px; }
             .sidebar.active { transform: translateX(0); box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
             main { margin-left: 0 !important; width: 100% !important; padding: 15px !important; }
             .mobile-header { display: flex !important; }
         }
-
         .nav-btn { width: 100%; text-align: left; padding: 1rem 1.5rem; font-weight: 600; color: #4B5563; }
         .nav-btn.active { background: #F9FAFB; color: #8E9775; border-right: 4px solid #8E9775; }
-        
         main { margin-left: 220px; padding: 25px; width: calc(100% - 220px); transition: all 0.3s; }
-        
-        .mobile-header { 
-            display: none; background: white; padding: 15px; 
-            position: sticky; top: 0; z-index: 40; border-bottom: 1px solid #E5E7EB; 
-            justify-content: space-between; align-items: center;
-        }
-
+        .mobile-header { display: none; background: white; padding: 15px; position: sticky; top: 0; z-index: 40; border-bottom: 1px solid #E5E7EB; justify-content: space-between; align-items: center; }
         .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .hidden { display: none !important; }
-        input, select, textarea { border: 1px solid #D1D5DB; padding: 10px; border-radius: 8px; width: 100%; margin-top: 4px; font-size: 16px; /* 防止 iOS 輸入自動放大 */ }
+        input, select, textarea { border: 1px solid #D1D5DB; padding: 10px; border-radius: 8px; width: 100%; margin-top: 4px; font-size: 16px; outline: none; }
         .btn-primary { background: #8E9775; color: white; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; border:none; }
     </style>
 </head>
@@ -50,7 +35,7 @@
 
     <aside id="sidebar" class="sidebar">
         <div class="p-8 text-xl font-black text-[#8E9775] hidden md:block">好心手作</div>
-        <nav class="mt-4 md:mt-0">
+        <nav>
             <button onclick="changeTab('orders')" id="btn-orders" class="nav-btn active">訂單管理</button>
             <button onclick="changeTab('items')" id="btn-items" class="nav-btn">品項設定</button>
             <button onclick="changeTab('customers')" id="btn-customers" class="nav-btn">顧客資料</button>
@@ -64,13 +49,14 @@
         <section id="tab-orders" class="tab-content">
             <h2 class="text-xl md:text-2xl font-bold mb-4">訂單管理</h2>
             <div class="card">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div><label class="text-xs text-gray-400">顧客姓名</label><input type="text" id="o_cust"></div>
-                    <div><label class="text-xs text-gray-400">交貨日期</label><input type="date" id="o_delivery_date"></div>
-                    <div><label class="text-xs text-gray-400">產品</label><select id="o_item_sel" onchange="autoFill()"></select></div>
-                    <div><label class="text-xs text-gray-400">來源</label><select id="o_source"><option>LINE</option><option>IG/FB</option><option>其他</option></select></div>
+                    <div><label class="text-xs text-gray-400">下單日期 (今天)</label><input type="date" id="o_create_date"></div>
+                    <div><label class="text-xs text-gray-400">交貨日期 (自動推算)</label><input type="date" id="o_delivery_date"></div>
+                    <div><label class="text-xs text-gray-400">產品品項</label><select id="o_item_sel" onchange="autoFill()"></select></div>
                     <div><label class="text-xs text-gray-400">實收金額</label><input type="number" id="o_price"></div>
                     <div><label class="text-xs text-gray-400">成本</label><input type="number" id="o_cost"></div>
+                    <div><label class="text-xs text-gray-400">來源</label><select id="o_source"><option>LINE</option><option>IG/FB</option><option>其他</option></select></div>
                     <div class="md:col-span-2 flex items-end">
                         <input type="hidden" id="edit_id">
                         <button onclick="saveOrder()" id="sub_btn" class="btn-primary w-full mt-2">儲存訂單</button>
@@ -81,21 +67,14 @@
         </section>
 
         <section id="tab-items" class="tab-content hidden">
-            <h2 class="text-xl md:text-2xl font-bold mb-4">品項設定</h2>
+            <h2 class="text-xl font-bold mb-4">品項設定</h2>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="card">
-                    <label class="text-xs">品項名稱</label><input type="text" id="p_name">
-                    <label class="text-xs mt-3 block">預設售價</label><input type="number" id="p_price">
-                    <label class="text-xs mt-3 block">預估成本</label><input type="number" id="p_cost">
-                    <label class="text-xs mt-3 block">成本備註</label><textarea id="p_note" rows="2"></textarea>
-                    <button onclick="saveProduct()" class="btn-primary mt-4 w-full">儲存品項</button>
-                </div>
+                <div class="card"><label class="text-xs">品項名稱</label><input type="text" id="p_name"><label class="text-xs mt-3 block">售價</label><input type="number" id="p_price"><label class="text-xs mt-3 block">預估成本</label><input type="number" id="p_cost"><label class="text-xs mt-3 block">備註</label><textarea id="p_note" rows="2"></textarea><button onclick="saveProduct()" class="btn-primary mt-4 w-full">儲存品項</button></div>
                 <div class="lg:col-span-2" id="list_products"></div>
             </div>
         </section>
-
         <section id="tab-customers" class="tab-content hidden"><h2 class="text-xl font-bold mb-4">顧客資料</h2><div id="list_customers" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div></section>
-        <section id="tab-stats" class="tab-content hidden"><h2 class="text-xl font-bold mb-4">銷售報表</h2><div id="stats_summary" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6"></div><div class="card overflow-x-auto"><table class="w-full text-sm text-left"><thead><tr class="border-b"><th>日期</th><th>營收</th><th>利潤</th></tr></thead><tbody id="time_stats_body"></tbody></table></div></section>
+        <section id="tab-stats" class="tab-content hidden"><h2 class="text-xl font-bold mb-4">銷售報表</h2><div id="stats_summary" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6"></div><div class="card overflow-x-auto text-sm"><table class="w-full text-left border-collapse"><thead><tr class="border-b"><th>日期</th><th>營收</th><th>利潤</th></tr></thead><tbody id="time_stats_body"></tbody></table></div></section>
     </main>
 
     <script>
@@ -105,21 +84,36 @@
 
         let products = {}, orders = {};
 
-        // 手機版選單切換
-        function toggleMenu() {
-            document.getElementById('sidebar').classList.toggle('active');
-            document.getElementById('overlay').classList.toggle('hidden');
+        // --- 自動日期計算功能 ---
+        function getWorkingDate(startDate, daysToAdd) {
+            let date = new Date(startDate);
+            let count = 0;
+            while (count < daysToAdd) {
+                date.setDate(date.getDate() + 1);
+                if (date.getDay() !== 0 && date.getDay() !== 6) count++; // 排除週日(0)與週六(6)
+            }
+            return date.toISOString().split('T')[0];
         }
 
+        function resetDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('o_create_date').value = today;
+            document.getElementById('o_delivery_date').value = getWorkingDate(today, 21);
+            document.getElementById('edit_id').value = "";
+            document.getElementById('sub_btn').innerText = "儲存訂單";
+        }
+
+        window.onload = function() { resetDates(); };
+
+        function toggleMenu() { document.getElementById('sidebar').classList.toggle('active'); document.getElementById('overlay').classList.toggle('hidden'); }
         function changeTab(id) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('tab-' + id).classList.remove('hidden');
             document.getElementById('btn-' + id).classList.add('active');
-            if (window.innerWidth < 768) toggleMenu(); // 手機版切換後自動收起選單
+            if (window.innerWidth < 768) toggleMenu();
         }
 
-        // 核心功能 (簡化版本)
         function autoFill() {
             const id = document.getElementById('o_item_sel').value;
             if(id && products[id]) {
@@ -130,11 +124,13 @@
 
         function saveProduct() {
             const name = document.getElementById('p_name').value;
-            const price = parseFloat(document.getElementById('p_price').value || 0);
-            const cost = parseFloat(document.getElementById('p_cost').value || 0);
-            const note = document.getElementById('p_note').value;
-            if(name) db.ref('products').push({ name, price, cost, note });
-            alert("已儲存");
+            if(name) db.ref('products').push({ 
+                name, 
+                price: parseFloat(document.getElementById('p_price').value || 0),
+                cost: parseFloat(document.getElementById('p_cost').value || 0),
+                note: document.getElementById('p_note').value
+            });
+            alert("品項已儲存");
         }
 
         db.ref('products').on('value', snap => {
@@ -145,7 +141,7 @@
             Object.keys(products).forEach(id => {
                 const p = products[id];
                 sel.innerHTML += `<option value="${id}">${p.name}</option>`;
-                list.innerHTML += `<div class="card flex justify-between"><div><b>${p.name}</b><br><small>$${p.price} / $${p.cost}</small></div><button onclick="del('products','${id}')" class="text-red-400">刪除</button></div>`;
+                list.innerHTML += `<div class="card flex justify-between items-center"><div><b>${p.name}</b><br><small>$${p.price} / $${p.cost}</small></div><button onclick="del('products','${id}')" class="text-red-400 text-sm">刪除</button></div>`;
             });
         });
 
@@ -153,46 +149,63 @@
             const id = document.getElementById('edit_id').value;
             const pid = document.getElementById('o_item_sel').value;
             const cust = document.getElementById('o_cust').value;
-            const price = parseFloat(document.getElementById('o_price').value);
-            const cost = parseFloat(document.getElementById('o_cost').value);
+            if(!pid || !cust) return alert("請填寫顧客姓名並選擇品項");
+
+            const price = parseFloat(document.getElementById('o_price').value || 0);
+            const cost = parseFloat(document.getElementById('o_cost').value || 0);
             const data = {
                 cust, pid, itemName: products[pid].name, price, cost, profit: price - cost,
+                createDate: document.getElementById('o_create_date').value,
                 deliveryDate: document.getElementById('o_delivery_date').value,
-                source: document.getElementById('o_source').value,
-                createDate: new Date().toISOString().split('T')[0]
+                source: document.getElementById('o_source').value
             };
-            if(id) db.ref('orders/' + id).update(data); else db.ref('orders').push(data);
-            alert("完成");
+
+            if(id) db.ref('orders/' + id).update(data);
+            else db.ref('orders').push(data);
+            
+            alert("訂單已儲存");
             document.getElementById('o_cust').value = "";
+            resetDates();
         }
 
         db.ref('orders').on('value', snap => {
             orders = snap.val() || {};
             const list = document.getElementById('list_orders'); list.innerHTML = "";
-            let tS = 0, tP = 0;
+            let tS = 0, tP = 0, cMap = {};
             Object.keys(orders).sort((a,b) => orders[b].deliveryDate.localeCompare(orders[a].deliveryDate)).forEach(id => {
                 const o = orders[id]; tS += o.price; tP += o.profit;
-                list.innerHTML += `<div class="card flex justify-between items-center p-3">
+                if(!cMap[o.cust]) cMap[o.cust] = { total: 0, count: 0 };
+                cMap[o.cust].total += o.price; cMap[o.cust].count++;
+                list.innerHTML += `<div class="card flex justify-between items-center p-3 border-l-4 border-[#8E9775]">
                     <div><b>${o.cust}</b><br><small>${o.itemName} (${o.deliveryDate})</small></div>
-                    <div class="flex gap-3"><button onclick="editOrder('${id}')" class="text-blue-500 text-sm">修改</button><button onclick="del('orders','${id}')" class="text-red-300 text-sm">刪除</button></div>
+                    <div class="flex gap-4"><button onclick="editOrder('${id}')" class="text-blue-500 font-bold">修改</button><button onclick="del('orders','${id}')" class="text-red-300">刪除</button></div>
                 </div>`;
             });
             document.getElementById('stats_summary').innerHTML = `<div class="card text-center">營收 $${tS}</div><div class="card text-center text-green-600">利潤 $${Math.round(tP)}</div><div class="card text-center">單數 ${Object.keys(orders).length}</div>`;
+            renderCustomers(cMap);
         });
+
+        function renderCustomers(cMap) {
+            const div = document.getElementById('list_customers'); div.innerHTML = "";
+            Object.keys(cMap).sort((a,b) => cMap[b].total - cMap[a].total).forEach(name => {
+                div.innerHTML += `<div class="card text-center"><b>${name}</b><br><small>累積 $${cMap[name].total} (${cMap[name].count}次)</small></div>`;
+            });
+        }
 
         function editOrder(id) {
             const o = orders[id];
             document.getElementById('edit_id').value = id;
             document.getElementById('o_cust').value = o.cust;
+            document.getElementById('o_create_date').value = o.createDate;
             document.getElementById('o_delivery_date').value = o.deliveryDate;
             document.getElementById('o_item_sel').value = o.pid;
             document.getElementById('o_price').value = o.price;
             document.getElementById('o_cost').value = o.cost;
             document.getElementById('sub_btn').innerText = "確認修改";
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            if(window.innerWidth < 768) window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        function del(path, id) { if(confirm("確定刪除？")) db.ref(path + '/' + id).remove(); }
+        function del(path, id) { if(confirm("確定刪除此資料嗎？")) db.ref(path + '/' + id).remove(); }
     </script>
 </body>
 </html>
