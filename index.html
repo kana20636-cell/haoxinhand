@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>好心手作 - 營運全功能系統</title>
+    <title>好心手作 - 營運管理系統 (穩定版)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -15,12 +15,13 @@
         main { margin-left: 220px; padding: 30px; width: calc(100% - 220px); min-height: 100vh; }
         .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .hidden { display: none !important; }
-        input, select { border: 1px solid #D1D5DB; padding: 8px; border-radius: 6px; width: 100%; margin-top: 4px; font-size: 14px; }
-        label { font-size: 11px; font-weight: bold; color: #9CA3AF; }
-        .btn-primary { background: #8E9775; color: white; padding: 10px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 10px; cursor: pointer; }
-        .status-making { background: #FEF3C7; color: #D97706; }
-        .status-shipped { background: #DBEAFE; color: #2563EB; }
-        .status-done { background: #D1FAE5; color: #059669; }
+        input, select { border: 1px solid #D1D5DB; padding: 10px; border-radius: 8px; width: 100%; margin-top: 4px; font-size: 14px; }
+        label { font-size: 12px; font-weight: bold; color: #9CA3AF; }
+        .btn-primary { background: #8E9775; color: white; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 10px; cursor: pointer; border:none; }
+        .btn-primary:hover { opacity: 0.9; }
+        .status-making { background: #FEF3C7; color: #D97706; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+        .status-shipped { background: #DBEAFE; color: #2563EB; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+        .status-done { background: #D1FAE5; color: #059669; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -28,7 +29,7 @@
     <aside class="sidebar">
         <div class="p-6 text-center"><h1 class="text-xl font-black text-[#8E9775]">好心手作</h1></div>
         <nav>
-            <button onclick="showTab('orders')" id="btn-orders" class="nav-btn active">訂單追蹤</button>
+            <button onclick="showTab('orders')" id="btn-orders" class="nav-btn active">訂單管理</button>
             <button onclick="showTab('inventory')" id="btn-inventory" class="nav-btn">材料進貨</button>
             <button onclick="showTab('items')" id="btn-items" class="nav-btn">品項配方</button>
             <button onclick="showTab('customers')" id="btn-customers" class="nav-btn">顧客維護</button>
@@ -40,7 +41,7 @@
         <section id="tab-orders" class="tab-content">
             <h2 class="text-2xl font-bold mb-4">訂單追蹤</h2>
             <div class="card">
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-4">
                     <div class="col-span-2"><label>顧客姓名</label><input type="text" id="custName"></div>
                     <div><label>交貨日期</label><input type="date" id="orderDate"></div>
                     <div><label>來源</label><select id="orderSource"><option>LINE</option><option>FB/IG</option><option>現場</option><option>其他</option></select></div>
@@ -55,7 +56,7 @@
         <section id="tab-inventory" class="tab-content hidden">
             <h2 class="text-2xl font-bold mb-4">材料庫存入庫</h2>
             <div class="card border-l-4 border-gray-400">
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-4">
                     <div class="col-span-2"><label>材料名稱</label><input type="text" id="invName"></div>
                     <div><label>進貨數量</label><input type="number" id="invQty"></div>
                     <div><label>單位</label><input type="text" id="invUnit" placeholder="g"></div>
@@ -67,39 +68,38 @@
         </section>
 
         <section id="tab-items" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-4">品項維護與分類</h2>
+            <h2 class="text-2xl font-bold mb-4">品項與分類維護</h2>
             <div class="card bg-gray-50 border-dashed border-2 border-gray-200 mb-4">
-                <label>管理分類 (如: 巴斯克、磅蛋糕)</label>
-                <div class="flex gap-2 mt-2"><input type="text" id="newCatName" class="flex-1"><button onclick="addCategory()" class="bg-gray-600 text-white px-3 rounded-lg text-xs">新增</button></div>
-                <div id="catTags" class="flex flex-wrap gap-1 mt-3"></div>
+                <label>新增自定義分類 (如：圍兜)</label>
+                <div class="flex gap-2 mt-2"><input type="text" id="newCatName" class="flex-1" placeholder="輸入分類"><button onclick="addCategory()" class="bg-gray-600 text-white px-4 rounded-lg text-sm">新增</button></div>
+                <div id="catTags" class="flex flex-wrap gap-2 mt-3"></div>
             </div>
             <div class="card border-l-4 border-[#8E9775]">
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-4">
                     <div><label>產品分類</label><select id="itemCategorySelect"></select></div>
                     <div><label>產品名稱</label><input type="text" id="itemName"></div>
                     <div class="col-span-2"><label>預設售價</label><input type="number" id="itemPrice"></div>
                     <div class="col-span-2 bg-gray-100 p-4 rounded-lg">
-                        <label class="text-[#8E9775] block mb-2 font-bold text-sm">配方耗用設定 (成本自動連動)</label>
+                        <label class="text-[#8E9775] block mb-2 font-bold text-sm">配方耗用設定 (成本將自動連動)</label>
                         <div id="recipeBuilder" class="space-y-2"></div>
                     </div>
                 </div>
-                <button onclick="addItem()" class="btn-primary">儲存品項</button>
+                <button onclick="addItem()" class="btn-primary">確認儲存品項</button>
             </div>
             <div id="itemsListDisplay" class="space-y-3"></div>
         </section>
 
         <section id="tab-customers" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-4">顧客消費資料維護</h2>
+            <h2 class="text-2xl font-bold mb-4">顧客消費維護</h2>
             <div id="customerListDisplay" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </section>
 
         <section id="tab-stats" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-4">數據統計分析</h2>
+            <h2 class="text-2xl font-bold mb-4">銷售與營收分析</h2>
             <div id="statsSummary" class="grid grid-cols-3 gap-4 mb-6"></div>
             <div class="card">
-                <h3 class="font-bold mb-3">產品銷售排行</h3>
                 <table class="w-full text-sm">
-                    <thead><tr class="text-gray-400 border-b"><th class="text-left pb-2">產品名稱</th><th>銷售次數</th><th>累積毛利</th></tr></thead>
+                    <thead><tr class="text-gray-400 border-b"><th class="text-left pb-2">產品</th><th>銷量</th><th>累積利潤</th></tr></thead>
                     <tbody id="statsTableBody" class="text-center"></tbody>
                 </table>
             </div>
@@ -107,7 +107,6 @@
     </main>
 
     <script>
-        // Firebase 配置 (請確保 DatabaseURL 正確)
         const firebaseConfig = {
             apiKey: "AIzaSyA9tMo62e3zhf0qR9lgcHE-YMIh5eaZ8dk",
             authDomain: "haoxin-44098.firebaseapp.com",
@@ -130,7 +129,7 @@
             document.getElementById('btn-' + id).classList.add('active');
         }
 
-        // --- 訂單功能 ---
+        // 1. 訂單邏輯
         function autoFillPrice() {
             const pid = document.getElementById('orderItemSelect').value;
             if(pid && productList[pid]) document.getElementById('orderActualPrice').value = productList[pid].price;
@@ -146,13 +145,12 @@
                 const p = productList[pid];
                 db.ref('orders').push({
                     cust, date, source, itemName: p.name, 
-                    price, cost: p.totalCost, profit: price - p.totalCost,
-                    status: '製作中'
-                }).then(() => { document.getElementById('custName').value=''; });
-            } else { alert("資料不完整"); }
+                    price, cost: p.totalCost, profit: price - p.totalCost, status: '製作中'
+                }).then(() => { document.getElementById('custName').value=''; alert('訂單已建立'); });
+            } else { alert("請填寫顧客姓名、日期並選擇產品"); }
         }
 
-        // --- 材料庫存與成本 ---
+        // 2. 材料邏輯
         function addInventory() {
             const name = document.getElementById('invName').value;
             const qty = parseFloat(document.getElementById('invQty').value);
@@ -160,7 +158,7 @@
             const unit = document.getElementById('invUnit').value || 'g';
             if (name && qty > 0) {
                 db.ref('inventory').push({ name, qty, unit, price, unitPrice: price/qty })
-                .then(() => { document.getElementById('invName').value=''; document.getElementById('invQty').value=''; document.getElementById('invPrice').value=''; });
+                .then(() => { alert('材料入庫成功'); document.getElementById('invName').value=''; });
             }
         }
 
@@ -171,16 +169,16 @@
             rawMaterials = snap.val() || {};
             Object.keys(rawMaterials).forEach(id => {
                 const m = rawMaterials[id];
-                list.innerHTML += `<div class="bg-white p-3 border rounded shadow-sm text-sm flex justify-between">
+                list.innerHTML += `<div class="bg-white p-3 border rounded shadow-sm text-sm flex justify-between items-center">
                     <span>${m.name} <small class="text-gray-400">($${m.unitPrice.toFixed(2)}/${m.unit})</small></span>
-                    <button onclick="del('inventory','${id}')" class="text-red-400">刪除</button></div>`;
-                builder.innerHTML += `<div class="flex items-center gap-2 text-xs">
-                    <input type="checkbox" class="m-check" value="${id}"> <span class="w-20">${m.name}</span>
-                    <input type="number" class="m-qty w-16 border rounded p-1"> ${m.unit}</div>`;
+                    <button onclick="del('inventory','${id}')" class="text-red-400 font-bold">×</button></div>`;
+                builder.innerHTML += `<div class="flex items-center gap-2 text-xs py-1 border-b border-gray-50">
+                    <input type="checkbox" class="m-check" value="${id}"> <span class="w-24 overflow-hidden">${m.name}</span>
+                    <input type="number" class="m-qty w-20 border rounded p-1" placeholder="用量"> <span>${m.unit}</span></div>`;
             });
         });
 
-        // --- 分類與品項 ---
+        // 3. 品項與分類邏輯 (關鍵修復區)
         function addCategory() {
             const name = document.getElementById('newCatName').value;
             if(name) db.ref('categories').push(name).then(() => { document.getElementById('newCatName').value=''; });
@@ -189,29 +187,40 @@
         db.ref('categories').on('value', snap => {
             const tags = document.getElementById('catTags');
             const sel = document.getElementById('itemCategorySelect');
-            tags.innerHTML = ""; sel.innerHTML = "";
+            tags.innerHTML = ""; sel.innerHTML = '<option value="">請選擇分類</option>';
             const data = snap.val() || {};
             Object.keys(data).forEach(id => {
                 const name = data[id];
-                tags.innerHTML += `<span class="bg-gray-200 px-2 py-1 rounded text-xs">${name} <button onclick="del('categories','${id}')">×</button></span>`;
+                tags.innerHTML += `<span class="bg-gray-200 px-3 py-1 rounded-full text-xs">${name} <button onclick="del('categories','${id}')" class="ml-1 text-red-500">×</button></span>`;
                 sel.innerHTML += `<option value="${name}">${name}</option>`;
             });
         });
 
         function addItem() {
             const name = document.getElementById('itemName').value;
-            const category = document.getElementById('itemCategorySelect').value;
+            const cat = document.getElementById('itemCategorySelect').value;
             const price = parseFloat(document.getElementById('itemPrice').value || 0);
             let totalCost = 0;
+            let hasMaterial = false;
+
             document.querySelectorAll('.m-check:checked').forEach(el => {
+                hasMaterial = true;
                 const mid = el.value;
                 const qty = parseFloat(el.parentElement.querySelector('.m-qty').value || 0);
                 totalCost += (rawMaterials[mid].unitPrice * qty);
             });
-            if (name && category) {
-                db.ref('items').push({ name, category, price, totalCost, profit: price - totalCost })
-                .then(() => { alert('品項儲存完成'); document.getElementById('itemName').value=''; });
-            }
+
+            if (!name || !cat) { alert("請填寫產品名稱並選擇分類！"); return; }
+            if (!hasMaterial) { alert("請至少勾選一項材料並輸入用量！"); return; }
+
+            db.ref('items').push({ name, category: cat, price, totalCost, profit: price - totalCost })
+            .then(() => { 
+                alert('【'+name+'】新增成功！'); 
+                document.getElementById('itemName').value=''; 
+                document.getElementById('itemPrice').value=''; 
+                document.querySelectorAll('.m-check').forEach(c => c.checked = false);
+                document.querySelectorAll('.m-qty').forEach(q => q.value = '');
+            });
         }
 
         db.ref('items').on('value', snap => {
@@ -221,85 +230,49 @@
             productList = snap.val() || {};
             Object.keys(productList).forEach(id => {
                 const p = productList[id];
-                list.innerHTML += `<div class="bg-white p-3 border rounded flex justify-between items-center shadow-sm">
-                    <div><b>[${p.category}] ${p.name}</b><br><small class="text-red-400">成本: $${p.totalCost.toFixed(1)}</small> | <small class="text-green-600">利潤: $${p.profit.toFixed(1)}</small></div>
-                    <button onclick="del('items','${id}')" class="text-red-300 text-xs">刪除</button></div>`;
+                list.innerHTML += `<div class="bg-white p-4 border rounded-lg flex justify-between items-center shadow-sm">
+                    <div><b class="text-[#8E9775] text-lg">[${p.category}] ${p.name}</b><br>
+                    <small class="text-gray-400">售價: $${p.price} | 成本: $${p.totalCost.toFixed(1)} | 利潤: $${p.profit.toFixed(1)}</small></div>
+                    <button onclick="del('items','${id}')" class="text-red-300">刪除</button></div>`;
                 sel.innerHTML += `<option value="${id}">${p.category} - ${p.name}</option>`;
             });
         });
 
-        // --- 核心連動：訂單、報表、顧客 ---
+        // 4. 數據整合 (訂單/報表/顧客)
         db.ref('orders').on('value', snap => {
             const orderList = document.getElementById('orderListDisplay');
             const statsSum = document.getElementById('statsSummary');
             const statsTable = document.getElementById('statsTableBody');
             const custDisp = document.getElementById('customerListDisplay');
-            
             orderList.innerHTML = ""; statsTable.innerHTML = ""; custDisp.innerHTML = "";
             const data = snap.val() || {};
-            
-            let totalRev = 0, totalCost = 0, pStats = {}, cStats = {};
+            let tRev = 0, tCost = 0, pStats = {}, cStats = {};
 
-            Object.keys(data).sort((a,b) => data[a].date.localeCompare(data[b].date)).forEach(id => {
+            Object.keys(data).sort((a,b) => data[b].date.localeCompare(data[a].date)).forEach(id => {
                 const o = data[id];
-                totalRev += o.price; totalCost += (o.cost || 0);
-                
-                // 銷售報表統計
+                tRev += o.price; tCost += (o.cost || 0);
                 pStats[o.itemName] = pStats[o.itemName] || { count: 0, profit: 0 };
-                pStats[o.itemName].count++;
-                pStats[o.itemName].profit += (o.price - (o.cost || 0));
+                pStats[o.itemName].count++; pStats[o.itemName].profit += o.profit;
+                if(!cStats[o.cust]) cStats[o.cust] = { total: 0, count: 0, last: o.date };
+                cStats[o.cust].total += o.price; cStats[o.cust].count++; if(o.date > cStats[o.cust].last) cStats[o.cust].last = o.date;
 
-                // 顧客維護統計
-                if(!cStats[o.cust]) cStats[o.cust] = { total: 0, orders: 0, last: o.date };
-                cStats[o.cust].total += o.price;
-                cStats[o.cust].orders += 1;
-                if(o.date > cStats[o.cust].last) cStats[o.cust].last = o.date;
-
-                const statusCls = o.status === "製作中" ? "status-making" : (o.status === "已出貨" ? "status-shipped" : "status-done");
+                const sCls = o.status === "製作中" ? "status-making" : (o.status === "已出貨" ? "status-shipped" : "status-done");
                 orderList.innerHTML += `<div class="card flex justify-between border-l-8 ${o.status=='已完成'?'border-gray-200 opacity-60':'border-[#8E9775]'}">
-                    <div><span class="px-2 py-1 rounded text-[10px] font-bold ${statusCls}">${o.status}</span>
-                        <b class="ml-2">${o.cust}</b> <small class="text-gray-400">[${o.source}]</small>
-                        <p class="text-xs text-gray-500 mt-1">${o.itemName} - $${o.price} (${o.date})</p>
-                    </div>
-                    <div class="text-right">
-                        <select onchange="db.ref('orders/${id}').update({status:this.value})" class="text-xs p-1">
-                            <option value="製作中" ${o.status=='製作中'?'selected':''}>製作中</option>
-                            <option value="已出貨" ${o.status=='已出貨'?'selected':''}>已出貨</option>
-                            <option value="已完成" ${o.status=='已完成'?'selected':''}>已完成</option>
-                        </select>
-                        <div class="mt-2"><button onclick="editOrder('${id}','${o.cust}')" class="text-blue-400 text-[10px] mr-2">修改姓名</button>
-                        <button onclick="del('orders','${id}')" class="text-red-300 text-[10px]">刪除</button></div>
-                    </div></div>`;
+                    <div><span class="${sCls}">${o.status}</span> <b class="ml-2">${o.cust}</b> <small class="text-gray-400">(${o.source})</small>
+                    <p class="text-xs text-gray-500 mt-2">${o.itemName} - 金額: $${o.price} / 日期: ${o.date}</p></div>
+                    <div class="text-right"><select onchange="db.ref('orders/${id}').update({status:this.value})" class="text-xs mb-2">
+                        <option value="製作中" ${o.status=='製作中'?'selected':''}>製作中</option>
+                        <option value="已出貨" ${o.status=='已出貨'?'selected':''}>已出貨</option>
+                        <option value="已完成" ${o.status=='已完成'?'selected':''}>已完成</option>
+                    </select><br><button onclick="editName('${id}','${o.cust}')" class="text-blue-400 text-[10px] mr-2">修改</button><button onclick="del('orders','${id}')" class="text-red-300 text-[10px]">刪除</button></div></div>`;
             });
 
-            // 報表數據
-            statsSum.innerHTML = `
-                <div class="bg-white p-4 rounded-xl text-center shadow-sm"><h6>總營收</h6><b class="text-lg">$${totalRev.toLocaleString()}</b></div>
-                <div class="bg-white p-4 rounded-xl text-center shadow-sm"><h6>總成本</h6><b class="text-lg text-red-400">$${totalCost.toFixed(0)}</b></div>
-                <div class="bg-white p-4 rounded-xl text-center shadow-sm"><h6>總利潤</h6><b class="text-lg text-green-500">$${(totalRev-totalCost).toFixed(0)}</b></div>`;
-            
-            Object.keys(pStats).forEach(name => {
-                statsTable.innerHTML += `<tr class="border-b"><td class="py-2 text-left">${name}</td><td>${pStats[name].count}</td><td class="text-green-600">$${pStats[name].profit.toFixed(0)}</td></tr>`;
-            });
-
-            // 顧客維護列表
-            Object.keys(cStats).forEach(cName => {
-                const c = cStats[cName];
-                custDisp.innerHTML += `<div class="card !mb-0 shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-start">
-                        <b>${cName}</b><span class="text-[#8E9775] font-bold">$${c.total}</span>
-                    </div>
-                    <div class="text-[10px] text-gray-400 mt-2">累計訂單：${c.orders} 次</div>
-                    <div class="text-[10px] text-gray-400">最後購買：${c.last}</div>
-                </div>`;
-            });
+            statsSum.innerHTML = `<div class="bg-white p-4 rounded-xl text-center shadow-sm"><h6>總營收</h6><b class="text-lg">$${tRev.toLocaleString()}</b></div><div class="bg-white p-4 rounded-xl text-center shadow-sm"><h6>總成本</h6><b class="text-lg text-red-400">$${tCost.toFixed(0)}</b></div><div class="bg-white p-4 rounded-xl text-center shadow-sm"><h6>淨利潤</h6><b class="text-lg text-green-500">$${(tRev-tCost).toFixed(0)}</b></div>`;
+            Object.keys(pStats).forEach(n => { statsTable.innerHTML += `<tr class="border-b"><td class="py-2 text-left">${n}</td><td>${pStats[n].count}</td><td class="text-green-600">$${pStats[n].profit.toFixed(0)}</td></tr>`; });
+            Object.keys(cStats).forEach(cn => { custDisp.innerHTML += `<div class="card !mb-0 shadow-sm border border-gray-100"><b>${cn}</b><div class="text-[#8E9775] font-bold">$${cStats[cn].total}</div><div class="text-[10px] text-gray-400 mt-2">次數：${cStats[cn].count} | 最後日期：${cStats[cn].last}</div></div>`; });
         });
 
-        function editOrder(id, oldName) {
-            const newName = prompt("請輸入修改後的顧客姓名：", oldName);
-            if(newName) db.ref('orders/'+id).update({ cust: newName });
-        }
-
+        function editName(id, old) { const n = prompt("修改顧客姓名：", old); if(n) db.ref('orders/'+id).update({ cust: n }); }
         function del(p, id) { if(confirm("確定刪除這筆資料？")) db.ref(p+'/'+id).remove(); }
         window.onload = () => showTab('orders');
     </script>
