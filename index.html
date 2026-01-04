@@ -2,258 +2,269 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>好心手作管理系統</title>
+    <title>好心手作管理系統 v3.0</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-    
     <style>
-        body { background-color: #F8F9FA; color: #374151; font-family: "PingFang TC", sans-serif; }
-        .sidebar { width: 240px; height: 100vh; position: sticky; top: 0; background: white; border-right: 1px solid #E5E7EB; }
-        .nav-btn { width: 100%; text-align: left; padding: 1rem 1.5rem; font-weight: 600; color: #6B7280; transition: 0.2s; }
-        .nav-btn.active { background-color: #F3F4F6; color: #8E9775; border-right: 4px solid #8E9775; }
-        .card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
-        
+        body { background-color: #F3F4F6; color: #374151; font-family: "PingFang TC", sans-serif; }
+        .sidebar { width: 240px; height: 100vh; position: sticky; top: 0; background: white; border-right: 1px solid #E5E7EB; flex-shrink: 0; }
+        .nav-btn { width: 100%; text-align: left; padding: 1rem 1.5rem; font-weight: 600; color: #6B7280; transition: 0.2s; border-right: 4px solid transparent; }
+        .nav-btn.active { background-color: #F9FAFB; color: #8E9775; border-right-color: #8E9775; }
+        .card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; border-left: 8px solid #E5E7EB; }
         .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
         .full-row { grid-column: span 2; }
-        
-        input, select { border: 1px solid #D1D5DB; padding: 0.6rem; border-radius: 8px; width: 100%; font-size: 16px; }
+        label { display: block; font-size: 0.75rem; font-weight: 700; color: #9CA3AF; margin-bottom: 4px; }
+        input, select { border: 1px solid #D1D5DB; padding: 0.6rem; border-radius: 8px; width: 100%; font-size: 16px; background: #FFFFFF; }
         .btn-primary { background: #8E9775; color: white; padding: 0.8rem; border-radius: 8px; font-weight: 700; width: 100%; margin-top: 1rem; }
-        
-        .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .status-making { background: #FEF3C7; color: #D97706; }
-        .status-shipped { background: #DBEAFE; color: #2563EB; }
-        .status-done { background: #D1FAE5; color: #059669; }
-        
-        /* 工作天警示 */
-        .order-urgent { border-left: 10px solid #EF4444 !important; }   /* 紅色: 5天內 */
-        .order-warning { border-left: 10px solid #F59E0B !important; }  /* 橘色: 10天內 */
-        .order-safe { border-left: 10px solid #10B981 !important; }     /* 綠色: 充足 */
-        .order-completed { border-left: 10px solid #E5E7EB !important; }/* 灰色: 已完成 */
+        /* 狀態顏色 */
+        .order-urgent { border-left-color: #EF4444 !important; }
+        .order-warning { border-left-color: #F59E0B !important; }
+        .order-safe { border-left-color: #10B981 !important; }
+        .order-completed { border-left-color: #D1D5DB !important; opacity: 0.7; }
+        .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .tag-making { background: #FEF3C7; color: #D97706; }
+        .tag-shipped { background: #DBEAFE; color: #2563EB; }
+        .tag-done { background: #D1FAE5; color: #059669; }
+        .hidden { display: none; }
     </style>
 </head>
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyA9tMo62e3zhf0qR9lgcHE-YMIh5eaZ8dk",
-        authDomain: "haoxin-44098.firebaseapp.com",
-        databaseURL: "https://haoxin-44098-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "haoxin-44098",
-        storageBucket: "haoxin-44098.firebasestorage.app",
-        messagingSenderId: "878734507134",
-        appId: "1:878734507134:web:91598cf6816d401e66ac2f"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // 計算剩餘工作天 (不含週末)
-    function getWorkingDaysLeft(targetDateStr) {
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        const target = new Date(targetDateStr);
-        target.setHours(0,0,0,0);
-        
-        if (target < today) return -1; // 已逾期
-
-        let count = 0;
-        let cur = new Date(today);
-        while (cur < target) {
-            cur.setDate(cur.getDate() + 1);
-            const day = cur.getDay();
-            if (day !== 0 && day !== 6) { // 0是週日, 6是週六
-                count++;
-            }
-        }
-        return count;
-    }
-
-    function showTab(id) {
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-        document.getElementById(id).classList.remove('hidden');
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        if(event) event.currentTarget.classList.add('active');
-    }
-
-    // --- 訂單管理 ---
-    function addNewOrder() {
-        const d = {
-            date: document.getElementById('orderDate').value,
-            cust: document.getElementById('custName').value,
-            item: document.getElementById('orderItemSelect').value,
-            price: parseFloat(document.getElementById('orderPrice').value || 0),
-            source: document.getElementById('orderSource').value,
-            status: '製作中'
-        };
-        if(d.cust && d.date && d.item) {
-            db.ref('orders').push(d).then(() => {
-                alert('訂單已建立');
-                document.getElementById('custName').value = '';
-            });
-        } else {
-            alert('請填寫完整資訊（包含日期）');
-        }
-    }
-
-    function updateStatus(id, newStatus) {
-        db.ref('orders/' + id).update({ status: newStatus });
-    }
-
-    db.ref('orders').on('value', snap => {
-        const list = document.getElementById('orderListDisplay');
-        list.innerHTML = "";
-        const data = snap.val();
-        if(!data) return;
-
-        Object.keys(data).sort((a,b) => data[a].date.localeCompare(data[b].date)).forEach(id => {
-            const o = data[id];
-            const wdLeft = getWorkingDaysLeft(o.date);
-            
-            // 決定警示樣式
-            let alertClass = 'order-safe';
-            let dayText = `剩餘 ${wdLeft} 工作天`;
-
-            if (o.status === '已完成') {
-                alertClass = 'order-completed';
-                dayText = '訂單已結案';
-            } else {
-                if (wdLeft < 0) {
-                    alertClass = 'order-urgent';
-                    dayText = '已逾期！';
-                } else if (wdLeft <= 5) {
-                    alertClass = 'order-urgent'; // 紅色
-                } else if (wdLeft <= 10) {
-                    alertClass = 'order-warning'; // 橘色
-                }
-            }
-
-            let statusClass = 'status-making';
-            if (o.status === '已出貨') statusClass = 'status-shipped';
-            if (o.status === '已完成') statusClass = 'status-done';
-
-            list.innerHTML += `
-                <div class="card ${alertClass} flex justify-between items-center">
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="status-tag ${statusClass}">${o.status}</span>
-                            <span class="text-xs font-bold text-gray-500">${dayText}</span>
-                        </div>
-                        <b class="text-lg">${o.cust}</b> <span class="text-xs text-gray-400">[${o.source}]</span>
-                        <p class="text-sm text-gray-600">${o.item}</p>
-                        <small class="text-gray-400 text-xs">交貨日期：${o.date}</small>
-                    </div>
-                    <div class="text-right">
-                        <b class="text-xl">$${o.price}</b><br>
-                        <select onchange="updateStatus('${id}', this.value)" class="text-xs border mt-2 p-1 rounded">
-                            <option value="製作中" ${o.status=='製作中'?'selected':''}>製作中</option>
-                            <option value="已出貨" ${o.status=='已出貨'?'selected':''}>已出貨</option>
-                            <option value="已完成" ${o.status=='已完成'?'selected':''}>已完成</option>
-                        </select>
-                        <button onclick="del('orders','${id}')" class="text-red-300 text-xs ml-2">刪除</button>
-                    </div>
-                </div>`;
-        });
-    });
-
-    // --- 品項與進貨 (維持功能) ---
-    function addItem() {
-        const n = document.getElementById('itemName').value;
-        const c = parseFloat(document.getElementById('itemCost').value || 0);
-        const p = parseFloat(document.getElementById('itemPrice').value || 0);
-        const q = document.getElementById('itemQty').value;
-        const u = document.getElementById('itemUnit').value;
-        if(n) db.ref('items').push({ name: n, cost: c, price: p, qty: q, unit: u });
-    }
-
-    db.ref('items').on('value', snap => {
-        const list = document.getElementById('itemsListDisplay');
-        const oSel = document.getElementById('orderItemSelect');
-        list.innerHTML = ""; oSel.innerHTML = '<option value="">選擇產品</option>';
-        if(!snap.val()) return;
-        Object.keys(snap.val()).forEach(id => {
-            const i = snap.val()[id];
-            const spec = `${i.qty||''}${i.unit||''}`;
-            list.innerHTML += `<div class="p-2 border-b text-sm flex justify-between">
-                <span>${i.name} (${spec}) - 成本$${i.cost} / 售價$${i.price}</span>
-                <button onclick="del('items','${id}')" class="text-red-300">×</button></div>`;
-            oSel.innerHTML += `<option value="${i.name} (${spec})">${i.name} (${spec})</option>`;
-        });
-    });
-
-    function addInventory() {
-        const d = { date: document.getElementById('invDate').value, name: document.getElementById('invName').value, qty: document.getElementById('invQty').value, unit: document.getElementById('invUnit').value, price: parseFloat(document.getElementById('invPrice').value || 0) };
-        if(d.name) db.ref('inventory').push(d);
-    }
-    db.ref('inventory').on('value', snap => {
-        const list = document.getElementById('inventoryListDisplay'); list.innerHTML = "";
-        if(!snap.val()) return;
-        Object.keys(snap.val()).forEach(id => {
-            const v = snap.val()[id];
-            list.innerHTML += `<div class="bg-white p-2 border rounded text-xs mb-1 flex justify-between"><span>${v.date} ${v.name}</span><b>$${v.price}</b></div>`;
-        });
-    });
-
-    function del(p, id) { if(confirm("確定刪除？")) db.ref(p+'/'+id).remove(); }
-</script>
 <body class="flex">
+
     <aside class="sidebar">
         <div class="py-8">
-            <h1 class="text-xl font-bold mb-10 text-center text-[#8E9775]">好心手作</h1>
+            <h1 class="text-xl font-black mb-10 text-center text-[#8E9775]">好心手作</h1>
             <nav>
-                <button onclick="showTab('orders')" class="nav-btn active">訂單追蹤</button>
-                <button onclick="showTab('inventory')" class="nav-btn">進貨紀錄</button>
-                <button onclick="showTab('items')" class="nav-btn">品項成本</button>
+                <button onclick="showTab('orders')" class="nav-btn active">訂單管理</button>
+                <button onclick="showTab('inventory')" class="nav-btn">材料庫存(進貨)</button>
+                <button onclick="showTab('items')" class="nav-btn">產品配方成本</button>
             </nav>
         </div>
     </aside>
 
-    <main class="flex-1 p-6 max-w-5xl">
+    <main class="flex-1 p-6 md:p-12 max-w-5xl">
+        
         <section id="orders" class="tab-content">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800">訂單追蹤</h2>
-            <div class="card">
+            <h2 class="text-2xl font-bold mb-6">訂單追蹤</h2>
+            <div class="card !border-l-0">
                 <div class="form-grid">
-                    <div class="full-row"><input type="text" id="custName" placeholder="顧客姓名"></div>
-                    <input type="date" id="orderDate">
-                    <select id="orderSource">
-                        <option value="LINE">LINE</option>
-                        <option value="FB/IG">FB/IG</option>
-                        <option value="社群">社群</option>
-                    </select>
-                    <div class="full-row"><select id="orderItemSelect"></select></div>
-                    <div class="full-row"><input type="number" id="orderPrice" placeholder="銷售金額"></div>
+                    <div class="full-row"><label>顧客姓名</label><input type="text" id="custName" placeholder="顧客姓名"></div>
+                    <div><label>交貨日期</label><input type="date" id="orderDate"></div>
+                    <div><label>來源</label><select id="orderSource"><option>LINE</option><option>FB/IG</option><option>社群</option><option>現場</option></select></div>
+                    <div class="full-row"><label>選擇產品</label><select id="orderItemSelect"></select></div>
+                    <div class="full-row"><label>成交金額</label><input type="number" id="orderPrice" placeholder="0"></div>
                 </div>
-                <button onclick="addNewOrder()" class="btn-primary">建立新訂單</button>
+                <button onclick="addNewOrder()" class="btn-primary">建立訂單</button>
             </div>
             <div id="orderListDisplay" class="space-y-4"></div>
         </section>
 
         <section id="inventory" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-6">進貨紀錄</h2>
-            <div class="card">
+            <h2 class="text-2xl font-bold mb-6">材料進貨管理</h2>
+            <div class="card !border-l-[#4B5563]">
                 <div class="form-grid">
-                    <div class="full-row"><input type="text" id="invName" placeholder="材料名稱"></div>
-                    <input type="date" id="invDate">
-                    <div class="flex gap-2"><input type="number" id="invQty" placeholder="數"><input type="text" id="invUnit" placeholder="位"></div>
-                    <div class="full-row"><input type="number" id="invPrice" placeholder="總金額"></div>
+                    <div class="full-row"><label>材料名稱</label><input type="text" id="invName" placeholder="如：奶油"></div>
+                    <div><label>進貨數量</label><input type="number" id="invQty" placeholder="1000"></div>
+                    <div><label>單位</label><input type="text" id="invUnit" placeholder="g"></div>
+                    <div class="full-row"><label>進貨總金額</label><input type="number" id="invPrice" placeholder="0"></div>
+                    <p class="full-row text-xs text-gray-400">* 此單價將作為配方成本計算基準</p>
                 </div>
-                <button onclick="addInventory()" class="btn-primary" style="background:#4B5563">儲存進貨</button>
+                <button onclick="addInventory()" class="btn-primary" style="background:#4B5563">存入原料庫</button>
             </div>
-            <div id="inventoryListDisplay" class="space-y-1"></div>
+            <div id="inventoryListDisplay" class="space-y-2"></div>
         </section>
 
         <section id="items" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-6">品項管理</h2>
-            <div class="card">
+            <h2 class="text-2xl font-bold mb-6">產品配方與成本</h2>
+            <div class="card !border-l-[#8E9775]">
                 <div class="form-grid">
-                    <div class="full-row"><input type="text" id="itemName" placeholder="產品名稱"></div>
-                    <input type="number" id="itemQty" placeholder="數量 (如:10)">
-                    <input type="text" id="itemUnit" placeholder="單位 (如:入)">
-                    <input type="number" id="itemCost" placeholder="成本">
-                    <input type="number" id="itemPrice" placeholder="售價">
+                    <div class="full-row"><label>產品名稱</label><input type="text" id="itemName" placeholder="如：原味巴斯克"></div>
+                    <div><label>銷售規格量</label><input type="number" id="itemQty" placeholder="1"></div>
+                    <div><label>銷售單位</label><input type="text" id="itemUnit" placeholder="個"></div>
+                    <div class="full-row"><label>預設售價</label><input type="number" id="itemPrice" placeholder="0"></div>
+                    
+                    <div class="full-row mt-4 p-4 bg-gray-50 rounded-lg">
+                        <label class="text-[#8E9775]">配方用料設定</label>
+                        <div id="recipeBuilder" class="space-y-2 mt-2">
+                            </div>
+                    </div>
                 </div>
-                <button onclick="addItem()" class="btn-primary">存入清單</button>
-                <div id="itemsListDisplay" class="mt-6"></div>
+                <button onclick="addItem()" class="btn-primary">儲存產品配方</button>
             </div>
+            <div id="itemsListDisplay" class="space-y-3"></div>
         </section>
+
     </main>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9tMo62e3zhf0qR9lgcHE-YMIh5eaZ8dk",
+            authDomain: "haoxin-44098.firebaseapp.com",
+            databaseURL: "https://haoxin-44098-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "haoxin-44098",
+            storageBucket: "haoxin-44098.firebasestorage.app",
+            messagingSenderId: "878734507134",
+            appId: "1:878734507134:web:91598cf6816d401e66ac2f"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // 核心變數存放
+        let rawMaterials = {};
+
+        // 工作天計算
+        function calculateWorkingDays(targetDateStr) {
+            const today = new Date(); today.setHours(0,0,0,0);
+            const target = new Date(targetDateStr); target.setHours(0,0,0,0);
+            if (target < today) return -1;
+            let count = 0; let tempDate = new Date(today);
+            while (tempDate < target) {
+                tempDate.setDate(tempDate.getDate() + 1);
+                if (tempDate.getDay() !== 0 && tempDate.getDay() !== 6) count++;
+            }
+            return count;
+        }
+
+        function showTab(id) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        // --- 1. 進貨與原料庫邏輯 ---
+        function addInventory() {
+            const name = document.getElementById('invName').value;
+            const qty = parseFloat(document.getElementById('invQty').value);
+            const price = parseFloat(document.getElementById('invPrice').value);
+            const unit = document.getElementById('invUnit').value;
+            const date = document.getElementById('invDate').value;
+            if(name && qty && price) {
+                const unitPrice = price / qty; // 計算每 1 單位成本
+                db.ref('inventory').push({ name, qty, unit, price, unitPrice, date });
+            }
+        }
+
+        db.ref('inventory').on('value', snap => {
+            const list = document.getElementById('inventoryListDisplay');
+            const builder = document.getElementById('recipeBuilder');
+            list.innerHTML = ""; builder.innerHTML = "";
+            rawMaterials = snap.val() || {};
+            
+            Object.keys(rawMaterials).forEach(id => {
+                const v = rawMaterials[id];
+                list.innerHTML += `<div class="bg-white p-2 border rounded text-xs flex justify-between"><span>${v.name} (${v.qty}${v.unit})</span><b>單價: ${v.unitPrice.toFixed(2)}/${v.unit}</b></div>`;
+                
+                // 同步更新配方編輯器的選項
+                builder.innerHTML += `
+                    <div class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" class="w-4 material-check" value="${id}">
+                        <span class="w-24 overflow-hidden">${v.name}</span>
+                        <input type="number" class="w-20 border p-1 material-qty" placeholder="用量">
+                        <span>${v.unit}</span>
+                    </div>`;
+            });
+        });
+
+        // --- 2. 品項與配方邏輯 ---
+        function addItem() {
+            const name = document.getElementById('itemName').value;
+            const price = parseFloat(document.getElementById('itemPrice').value || 0);
+            const specQty = document.getElementById('itemQty').value;
+            const specUnit = document.getElementById('itemUnit').value;
+            
+            const recipe = [];
+            let totalCost = 0;
+
+            document.querySelectorAll('.material-check:checked').forEach(el => {
+                const mId = el.value;
+                const useQty = parseFloat(el.parentElement.querySelector('.material-qty').value || 0);
+                if(useQty > 0) {
+                    const cost = rawMaterials[mId].unitPrice * useQty;
+                    recipe.push({ name: rawMaterials[mId].name, useQty, cost });
+                    totalCost += cost;
+                }
+            });
+
+            if(name) {
+                db.ref('items').push({ 
+                    name, price, specQty, specUnit, totalCost, recipe 
+                }).then(() => alert('產品配方已儲存'));
+            }
+        }
+
+        db.ref('items').on('value', snap => {
+            const list = document.getElementById('itemsListDisplay');
+            const oSel = document.getElementById('orderItemSelect');
+            list.innerHTML = ""; oSel.innerHTML = "";
+            const data = snap.val();
+            if(!data) return;
+
+            Object.keys(data).forEach(id => {
+                const i = data[id];
+                const profit = i.price - i.totalCost;
+                list.innerHTML += `
+                    <div class="bg-white p-4 rounded-lg border flex justify-between items-center text-sm">
+                        <div>
+                            <b>${i.name}</b> (${i.specQty}${i.specUnit})
+                            <div class="text-[10px] text-gray-400 mt-1">成本: $${i.totalCost.toFixed(1)} / 售價: $${i.price}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-green-600 font-bold">預估利潤: $${profit.toFixed(1)}</span>
+                            <button onclick="del('items','${id}')" class="ml-4 text-red-300">×</button>
+                        </div>
+                    </div>`;
+                oSel.innerHTML += `<option value="${i.name} ($${i.price})">${i.name} ($${i.price})</option>`;
+            });
+        });
+
+        // --- 3. 訂單邏輯 (維持工作天計算) ---
+        function addNewOrder() {
+            const d = {
+                cust: document.getElementById('custName').value,
+                date: document.getElementById('orderDate').value,
+                source: document.getElementById('orderSource').value,
+                item: document.getElementById('orderItemSelect').value,
+                price: parseFloat(document.getElementById('orderPrice').value || 0),
+                status: '製作中'
+            };
+            if(d.cust && d.date) db.ref('orders').push(d);
+        }
+
+        db.ref('orders').on('value', snap => {
+            const list = document.getElementById('orderListDisplay');
+            list.innerHTML = "";
+            const data = snap.val() || {};
+            Object.keys(data).sort((a,b) => data[a].date.localeCompare(data[b].date)).forEach(id => {
+                const o = data[id];
+                const workDays = calculateWorkingDays(o.date);
+                let alertClass = 'order-safe';
+                if (o.status === '已完成') alertClass = 'order-completed';
+                else if (workDays < 0) alertClass = 'order-urgent';
+                else if (workDays <= 5) alertClass = 'order-urgent';
+                else if (workDays <= 10) alertClass = 'order-warning';
+
+                list.innerHTML += `
+                    <div class="card ${alertClass} flex justify-between items-center">
+                        <div>
+                            <span class="status-tag ${o.status=='已完成'?'tag-done':'tag-making'}">${o.status}</span>
+                            <b class="ml-2">${o.cust}</b> <small class="text-gray-400">${o.date}</small>
+                            <p class="text-xs text-gray-500 mt-1">${o.item} / ${o.source}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold">$${o.price}</div>
+                            <select onchange="db.ref('orders/${id}').update({status:this.value})" class="text-[10px] border mt-1">
+                                <option value="製作中" ${o.status=='製作中'?'selected':''}>製作中</option>
+                                <option value="已完成" ${o.status=='已完成'?'selected':''}>已完成</option>
+                            </select>
+                            <button onclick="del('orders','${id}')" class="text-red-300 text-[10px] ml-2">刪除</button>
+                        </div>
+                    </div>`;
+            });
+        });
+
+        function del(path, id) { if(confirm("確定刪除？")) db.ref(path+'/'+id).remove(); }
+    </script>
 </body>
 </html>
