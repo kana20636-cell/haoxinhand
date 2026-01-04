@@ -52,13 +52,15 @@
                 <select id="orderItemSelect"><option value="">選擇品項</option></select>
                 <input type="number" id="orderPrice" placeholder="金額">
                 <select id="orderSource">
-                        <option value="社群">來源：社群</option>
-                        <option value="LINE">來源：LINE</option>
-                        <option value="FB/IG">來源：FB/IG</option>
+                    <option value="社群">來源：社群</option>
+                    <option value="LINE">來源：LINE</option>
+                    <option value="FB/IG">來源：FB/IG</option>
+                </select>
                 <button onclick="addNewOrder()" class="w-full bg-[#8E9775] text-white py-2 rounded-lg font-bold">儲存訂單</button>
             </div>
             <div id="orderList" class="space-y-2"></div>
         </section>
+
         <section id="inventory" class="tab-content">
             <h2 class="text-xl font-bold mb-4">進貨管理</h2>
             <div class="card">
@@ -88,11 +90,13 @@
                 <div id="itemsList" class="mt-4"></div>
             </div>
         </section>
+
         <section id="customers" class="tab-content"><h2 class="text-xl font-bold">顧客維護</h2><div id="custList"></div></section>
         <section id="rank" class="tab-content"><h2 class="text-xl font-bold">銷售排行</h2><div id="rankList"></div></section>
         <section id="report" class="tab-content"><h2 class="text-xl font-bold">銷售報表</h2><div id="reportDisp"></div></section>
-    </main>    
+    </main>
     <script>
+        // --- Firebase 初始化 ---
         const firebaseConfig = {
             apiKey: "AIzaSyA9tMo62e3zhf0qR9lgcHE-YMIh5eaZ8dk",
             authDomain: "haoxin-44098.firebaseapp.com",
@@ -105,6 +109,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // --- 選單切換 ---
         function toggleSidebar() {
             const sb = document.getElementById('sidebar');
             const btn = document.getElementById('toggleBtn');
@@ -118,7 +123,7 @@
             if(event) event.currentTarget.classList.add('active');
         }
 
-        // --- 品項與分類 ---
+        // --- 品項與分類邏輯 ---
         function addCat() { const n = document.getElementById('newCat').value; if(n) db.ref('categories').push(n); document.getElementById('newCat').value=''; }
         db.ref('categories').on('value', snap => {
             const list = document.getElementById('catList'); const sel = document.getElementById('itemCat');
@@ -146,9 +151,14 @@
         });
         function editI(id, n, p) { const nn = prompt("名稱", n); const np = prompt("價格", p); if(nn && np) db.ref('items/'+id).update({ name: nn, price: np }); }
 
-        // --- 訂單 ---
+        // --- 訂單邏輯 ---
         function addNewOrder() {
-            const d = { date: document.getElementById('orderDate').value, cust: document.getElementById('custName').value, item: document.getElementById('orderItemSelect').value, price: parseFloat(document.getElementById('orderPrice').value || 0) };
+            const d = { 
+                date: document.getElementById('orderDate').value, 
+                cust: document.getElementById('custName').value, 
+                item: document.getElementById('orderItemSelect').value, 
+                price: parseFloat(document.getElementById('orderPrice').value || 0) 
+            };
             if(d.cust) db.ref('orders').push(d);
         }
         db.ref('orders').on('value', snap => {
@@ -160,10 +170,18 @@
             });
         });
 
+        // --- 進貨邏輯 ---
         function calcInv() { const q = document.getElementById('invQty').value; const p = document.getElementById('invPrice').value; if(q>0) document.getElementById('invUnitDisp').innerText = (p/q).toFixed(2); }
-        function addInventory() { const d = { date: document.getElementById('invDate').value, name: document.getElementById('invName').value, price: document.getElementById('invPrice').value }; db.ref('inventory').push(d); alert('進貨已紀錄'); }
+        function addInventory() { 
+            const d = { 
+                date: document.getElementById('invDate').value, 
+                name: document.getElementById('invName').value, 
+                price: document.getElementById('invPrice').value 
+            }; 
+            db.ref('inventory').push(d); 
+            alert('進貨已紀錄'); 
+        }
         function del(p, id) { if(confirm("確定刪除？")) db.ref(p+'/'+id).remove(); }
     </script>
 </body>
 </html>
-
