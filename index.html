@@ -16,7 +16,6 @@
         body { background-color: #F8F9FA; color: #4A4A4A; font-family: "PingFang TC", sans-serif; padding-top: env(safe-area-inset-top); }
         .sidebar { transition: all 0.3s ease; width: 260px; min-width: 260px; height: 100vh; position: sticky; top: 0; background: white; display: flex; flex-direction: column; border-right: 1px solid #EEE; }
         .sidebar.collapsed { width: 0; min-width: 0; overflow: hidden; border: none; }
-        /* 側邊欄捲軸：解決品項過多按不到底部的問題 */
         .sidebar-content { flex: 1; overflow-y: auto; padding: 1.5rem; } 
         .nav-btn { width: 100%; text-align: left; padding: 0.8rem 1rem; border-radius: 0.8rem; margin-bottom: 0.4rem; font-weight: bold; }
         .nav-btn.active { background-color: #8E9775; color: white; }
@@ -61,42 +60,33 @@
             <div id="orderList" class="space-y-2"></div>
         </section>
 
-        <section id="inventory" class="tab-content">
-            <h2 class="text-xl font-bold mb-4">進貨管理</h2>
-            <div class="card">
-                <input type="date" id="invDate">
-                <input type="text" id="invName" placeholder="進貨品項名稱">
-                <div class="flex gap-2"><input type="number" id="invQty" placeholder="數量"><input type="text" id="invUnit" placeholder="單位"></div>
-                <input type="number" id="invPrice" placeholder="總金額" oninput="calcInv()">
-                <p class="text-sm text-gray-400">單價：<span id="invUnitDisp">0</span></p>
-                <button onclick="addInventory()" class="w-full bg-[#8E9775] text-white py-2 rounded-lg font-bold">紀錄進貨</button>
-            </div>
-            <div id="inventoryList"></div>
-        </section>
-
         <section id="items" class="tab-content">
             <h2 class="text-xl font-bold mb-4">品項維護</h2>
             <div class="card bg-[#F3F5F0]">
-                <h3 class="font-bold mb-2 text-[#8E9775]">分類設定</h3>
+                <h3 class="font-bold mb-2 text-[#8E9775]">1. 分類設定</h3>
                 <div class="flex gap-2"><input type="text" id="newCat" placeholder="新分類"><button onclick="addCat()" class="bg-[#8E9775] text-white px-4 py-2 rounded-lg">新增</button></div>
                 <div id="catList" class="flex flex-wrap gap-2 mt-2"></div>
             </div>
             <div class="card">
-                <h3 class="font-bold mb-2 text-[#8E9775]">品項明細</h3>
+                <h3 class="font-bold mb-2 text-[#8E9775]">2. 品項明細編輯</h3>
                 <select id="itemCat"><option value="">選擇分類</option></select>
                 <input type="text" id="itemName" placeholder="品項名稱">
-                <input type="number" id="itemPrice" placeholder="單價">
+                <div class="flex gap-2">
+                    <input type="number" id="itemQty" placeholder="數量">
+                    <input type="text" id="itemUnit" placeholder="單位 (如:盒,片,顆)">
+                </div>
+                <input type="number" id="itemPrice" placeholder="建議單價">
                 <button onclick="addItem()" class="w-full bg-[#8E9775] text-white py-2 rounded-lg font-bold">新增品項</button>
                 <div id="itemsList" class="mt-4"></div>
             </div>
         </section>
 
+        <section id="inventory" class="tab-content"><h2 class="text-xl font-bold">進貨管理</h2><div id="inventoryList"></div></section>
         <section id="customers" class="tab-content"><h2 class="text-xl font-bold">顧客維護</h2><div id="custList"></div></section>
         <section id="rank" class="tab-content"><h2 class="text-xl font-bold">銷售排行</h2><div id="rankList"></div></section>
         <section id="report" class="tab-content"><h2 class="text-xl font-bold">銷售報表</h2><div id="reportDisp"></div></section>
     </main>
     <script>
-        // --- Firebase 初始化 ---
         const firebaseConfig = {
             apiKey: "AIzaSyA9tMo62e3zhf0qR9lgcHE-YMIh5eaZ8dk",
             authDomain: "haoxin-44098.firebaseapp.com",
@@ -109,7 +99,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- 選單切換 ---
         function toggleSidebar() {
             const sb = document.getElementById('sidebar');
             const btn = document.getElementById('toggleBtn');
@@ -123,7 +112,7 @@
             if(event) event.currentTarget.classList.add('active');
         }
 
-        // --- 品項與分類邏輯 ---
+        // --- 品項與分類 ---
         function addCat() { const n = document.getElementById('newCat').value; if(n) db.ref('categories').push(n); document.getElementById('newCat').value=''; }
         db.ref('categories').on('value', snap => {
             const list = document.getElementById('catList'); const sel = document.getElementById('itemCat');
@@ -136,51 +125,55 @@
         });
 
         function addItem() {
-            const c = document.getElementById('itemCat').value; const n = document.getElementById('itemName').value; const p = document.getElementById('itemPrice').value;
-            if(c && n) db.ref('items').push({ cat: c, name: n, price: p });
+            const c = document.getElementById('itemCat').value; 
+            const n = document.getElementById('itemName').value; 
+            const q = document.getElementById('itemQty').value;
+            const u = document.getElementById('itemUnit').value;
+            const p = document.getElementById('itemPrice').value;
+            if(c && n) db.ref('items').push({ cat: c, name: n, qty: q, unit: u, price: p });
+            // 清空輸入框
+            document.getElementById('itemName').value = ''; document.getElementById('itemQty').value = ''; document.getElementById('itemUnit').value = ''; document.getElementById('itemPrice').value = '';
         }
+
         db.ref('items').on('value', snap => {
             const list = document.getElementById('itemsList'); const oSel = document.getElementById('orderItemSelect');
             list.innerHTML = ""; oSel.innerHTML = '<option value="">選擇品項</option>';
             if(snap.val()) Object.keys(snap.val()).forEach(id => {
                 const i = snap.val()[id];
-                list.innerHTML += `<div class="flex justify-between border-b py-2 text-sm"><span>[${i.cat}] ${i.name} ($${i.price})</span>
+                const spec = i.qty ? `${i.qty}${i.unit}` : i.unit; // 組合規格文字
+                list.innerHTML += `<div class="flex justify-between border-b py-2 text-sm"><span>[${i.cat}] ${i.name} (${spec}) - $${i.price}</span>
                     <div><button onclick="editI('${id}','${i.name}',${i.price})" class="text-blue-500 mr-2">編輯</button><button onclick="del('items','${id}')" class="text-red-400">刪除</button></div></div>`;
-                oSel.innerHTML += `<option value="${i.name}">${i.name}</option>`;
+                oSel.innerHTML += `<option value="${i.name} (${spec})">${i.name} (${spec})</option>`;
             });
         });
-        function editI(id, n, p) { const nn = prompt("名稱", n); const np = prompt("價格", p); if(nn && np) db.ref('items/'+id).update({ name: nn, price: np }); }
 
-        // --- 訂單邏輯 ---
+        function editI(id, n, p) { 
+            const nn = prompt("名稱", n); const np = prompt("價格", p); 
+            if(nn && np) db.ref('items/'+id).update({ name: nn, price: np }); 
+        }
+
+        // --- 訂單 ---
         function addNewOrder() {
             const d = { 
                 date: document.getElementById('orderDate').value, 
                 cust: document.getElementById('custName').value, 
                 item: document.getElementById('orderItemSelect').value, 
-                price: parseFloat(document.getElementById('orderPrice').value || 0) 
+                price: parseFloat(document.getElementById('orderPrice').value || 0),
+                source: document.getElementById('orderSource').value
             };
             if(d.cust) db.ref('orders').push(d);
+            alert('訂單儲存成功！');
         }
+
         db.ref('orders').on('value', snap => {
             const list = document.getElementById('orderList'); list.innerHTML = "";
             if(snap.val()) Object.keys(snap.val()).forEach(id => {
                 const o = snap.val()[id];
-                list.innerHTML += `<div class="card py-3 flex justify-between items-center text-sm"><div><b>${o.cust}</b> - ${o.item}<br><small>${o.date}</small></div>
+                list.innerHTML += `<div class="card py-3 flex justify-between items-center text-sm"><div><b>${o.cust}</b> - ${o.item}<br><small>${o.date} (${o.source})</small></div>
                     <div class="font-bold text-[#8E9775]">$${o.price} <button onclick="del('orders','${id}')" class="text-red-400 ml-2">×</button></div></div>`;
             });
         });
 
-        // --- 進貨邏輯 ---
-        function calcInv() { const q = document.getElementById('invQty').value; const p = document.getElementById('invPrice').value; if(q>0) document.getElementById('invUnitDisp').innerText = (p/q).toFixed(2); }
-        function addInventory() { 
-            const d = { 
-                date: document.getElementById('invDate').value, 
-                name: document.getElementById('invName').value, 
-                price: document.getElementById('invPrice').value 
-            }; 
-            db.ref('inventory').push(d); 
-            alert('進貨已紀錄'); 
-        }
         function del(p, id) { if(confirm("確定刪除？")) db.ref(p+'/'+id).remove(); }
     </script>
 </body>
